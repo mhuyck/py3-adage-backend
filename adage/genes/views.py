@@ -7,8 +7,8 @@ from django.contrib.postgres.search import (
 )
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
-from .models import Gene
-from .serializers import GeneSerializer
+from genes.models import Gene
+from genes.serializers import GeneSerializer
 
 
 class GeneViewSet(ModelViewSet):
@@ -78,7 +78,13 @@ class GeneViewSet(ModelViewSet):
         similarity_str = self.request.query_params.get('autocomplete', None)
         if similarity_str is not None:
             queryset = queryset.annotate(
-                eid_str=Cast('entrezid', output_field=CharField())
+                eid_str=Case(
+                    When(entrezid__isnull=False,
+                         then=Cast('entrezid', output_field=CharField())
+                    ),
+                    default=Value(''),
+                    output_field=CharField(),
+                )
             ).annotate(
                 std_similarity=TrigramSimilarity('standard_name', similarity_str),
                 sys_similarity=TrigramSimilarity('systematic_name', similarity_str),
